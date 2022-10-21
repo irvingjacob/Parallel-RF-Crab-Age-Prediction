@@ -128,6 +128,8 @@ void convertStringVecToInt(std::vector<std::string>& stringVec, std::vector<int>
 
 
 int main(){
+    MPI_Init(NULL, NULL); 
+
     int fileLength = 3893, trainingDataLength = 3407, testingDataLength = 486, indexForTraining = 0; // I did this manually but it should be 80/20
     //Holds column names (shouldn't be needed potentially but I'll take them)
     std::vector<std::string> columns(9);
@@ -147,12 +149,21 @@ int main(){
     std::vector<double> lengthTest(testingDataLength), diameterTest(testingDataLength), heightTest(testingDataLength), weightTest(testingDataLength),shucked_weightTest(testingDataLength), viscera_weightTest(testingDataLength), shell_weightTest(testingDataLength);
     std::vector<int> ageTest(testingDataLength);
     std::vector<std::string> sexTest(testingDataLength);
+    
 
-    MPI_Init(NULL, NULL); 
-
-    int numProcs, myRank;
+    //MPI Declarations
+    int numProcs, myRank, myTrainingSize, myTestingSize;
     MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
     MPI_Comm_size(MPI_COMM_WORLD, &numProcs);
+
+    //Local MPI Training
+    std::vector<double> myLengthTrain(trainingDataLength/numProcs), myDiameterTrain(trainingDataLength/numProcs), myHeightTrain(trainingDataLength/numProcs), myWeightTrain(trainingDataLength/numProcs), myShucked_weightTrain(trainingDataLength/numProcs), myViscera_weightTrain(trainingDataLength/numProcs), myShell_weightTrain(trainingDataLength/numProcs);
+    std::vector<int> myAgeTrain(trainingDataLength/numProcs);
+    std::vector<std::string> mySexTrain(trainingDataLength/numProcs);
+    //Local MPI Testing
+    std::vector<double> myLengthTest(testingDataLength/numProcs), myDiameterTest(testingDataLength/numProcs), myHeightTest(testingDataLength/numProcs), myWeightTest(testingDataLength/numProcs),myShucked_weightTest(testingDataLength/numProcs), myViscera_weightTest(testingDataLength/numProcs), myShell_weightTest(testingDataLength/numProcs);
+    std::vector<int> myAgeTest(testingDataLength/numProcs);
+    std::vector<std::string> mySexTest(testingDataLength/numProcs);
 
     if(myRank==0){
         //Read in my dataset
@@ -173,6 +184,7 @@ int main(){
             viscera_weightTest[i] = viscera_weight[i];
             shell_weightTest[i] = shell_weight[i];
             ageTest[i] = age[i];
+            sexTest[i] = sex[i];
         }
         //Split for training 
         for(int i=testingDataLength; i < fileLength; i++){
@@ -184,15 +196,32 @@ int main(){
             viscera_weightTrain[indexForTraining] = viscera_weight[i];
             shell_weightTrain[indexForTraining] = shell_weight[i];
             ageTrain[indexForTraining] = age[i];
+            sexTain[indexForTraining] = sex[i]
             indexForTraining++;
         }
-        // printVectorDouble(lengthTrain); 
-        // std::cout << "\n\n\n\n";
-        // printVectorDouble(lengthTest);
-        // std::cout << "\n\n\n\n";
-        // printVectorDouble(length);
     }
-
+    
+    //Scatter Training Data
+    MPI_Scatter(lengthTrain.data(), myTrainingSize, MPI_DOUBLE, myLengthTrain.data(), myTrainingSize, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+    MPI_Scatter(diameterTrain.data(), myTrainingSize, MPI_DOUBLE, myDiameterTrain.data(), myTrainingSize, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+    MPI_Scatter(heightTrain.data(), myTrainingSize, MPI_DOUBLE, myHeightTrain.data(), myTrainingSize, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+    MPI_Scatter(weightTrain.data(), myTrainingSize, MPI_DOUBLE, myWeightTrain.data(), myTrainingSize, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+    MPI_Scatter(shucked_weightTrain.data(), myTrainingSize, MPI_DOUBLE, myShucked_weightTrain.data(), myTrainingSize, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+    MPI_Scatter(viscera_weightTrain.data(), myTrainingSize, MPI_DOUBLE, myViscera_weightTrain.data(), myTrainingSize, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+    MPI_Scatter(shell_weightTrain.data(), myTrainingSize, MPI_DOUBLE, myShell_weightTrain.data(), myTrainingSize, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+    MPI_Scatter(ageTrain.data(), myTrainingSize, MPI_INT, myAgeTrain.data(), myTrainingSize, MPI_INT, 0, MPI_COMM_WORLD);
+    MPI_Scatter(sexTrain.data(), myTrainingSize, MPI_CHAR, myAgeTrain.data(), myTrainingSize, MPI_CHAR, 0, MPI_COMM_WORLD);
+    
+    //Scatter TestingData
+    MPI_Scatter(lengthTest.data(), myTestingSize, MPI_DOUBLE, myLengthTest.data(), myTestingSize, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+    MPI_Scatter(diameterTest.data(), myTestingSize, MPI_DOUBLE, myDiameterTest.data(), myTestingSize, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+    MPI_Scatter(heightTest.data(), myTestingSize, MPI_DOUBLE, myHeightTest.data(), myTestingSize, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+    MPI_Scatter(weightTest.data(), myTestingSize, MPI_DOUBLE, myWeightTest.data(), myTestingSize, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+    MPI_Scatter(shucked_weightTest.data(), myTestingSize, MPI_DOUBLE, myShucked_weightTest.data(), myTestingSize, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+    MPI_Scatter(viscera_weightTest.data(), myTestingSize, MPI_DOUBLE, myViscera_weightTest.data(), myTestingSize, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+    MPI_Scatter(shell_weightTest.data(), myTestingSize, MPI_DOUBLE, myShell_weightTest.data(), myTestingSize, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+    MPI_Scatter(ageTest.data(), myTestingSize, MPI_INT, myAgeTest.data(), myTestingSize, MPI_INT, 0, MPI_COMM_WORLD);
+    MPI_Scatter(sexTest.data(), myTestingSize, MPI_CHAR, myAgeTest.data(), myTestingSize, MPI_CHAR, 0, MPI_COMM_WORLD);
     MPI_Finalize(); 
 
     return 0;
